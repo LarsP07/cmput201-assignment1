@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
         int numStops;
 
         sscanf(fgets(line, 50, schedule), "%d%*s%d", &routeNo, &numStops);
-
+        
         fclose(schedule);
 
         printf("schedule %d is route %d it has %d stops and is in the %c direction\n", i+1, routeNo, numStops, direction);

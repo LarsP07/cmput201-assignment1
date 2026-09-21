@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
         fclose(schedule);
 
-        printf("schedule %d is route %d it has %d stops and is in the %c direction\n", i+1, routeNo, numStops, direction);
+        printf("schedule #%d is route %d it has %d stops and is in the %c direction\n", i+1, routeNo, numStops, direction);
     }
 
     return 0;

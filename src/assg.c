@@ -12,54 +12,42 @@ void removeTrailingNewline(char *str) {
 
 int main(int argc, char *argv[]) {
     if (argv[1] == NULL) {
-        printf("ERROR: No path files parameter given.\n");
+        printf("ERROR: No list file path parameter given.\n");
+        return 1;
+    } else if (argv[2] == NULL) {
+        printf("ERROR: No input file path parameter given.\n");
         return 1;
     }
 
-    FILE *schedulesFile = fopen(argv[1], "r");
-
-    if (schedulesFile == NULL) {
-        printf("ERROR: %s failed to open.\n", argv[1]);
+    FILE *listFile = fopen(argv[1], "r");
+    if (listFile == NULL) {
+        printf("ERROR: List file %s failed to open.\n", argv[1]);
         return 1;
     }
 
-    int i;
-    char schedulePaths[1000][50];
-    for (i = 0; fgets(schedulePaths[i], 50, schedulesFile) != NULL; i++) {
-        sscanf(schedulePaths[i], "%s", schedulePaths[i]);
+    FILE *inputFile = fopen(argv[2], "r");
+    if (inputFile == NULL) {
+        printf("ERROR: Input file %s failed to open.\n", argv[2]);
+        return 1;
     }
 
-    int count = i;
-
-    fclose(schedulesFile);
-
-    printf("Processing %d schedule files...\n", count);
-
-    FILE *schedule;
-
-    for (i = 0; i < count; i++) {
-        schedule = fopen(schedulePaths[i], "r");
-        if (schedule == NULL) {
-            printf("ERROR: Could not open schedule with path %s.\n", schedulePaths[i]);
-            continue;
-        }
-
-        char direction;
-        int j;
-        for (j = 0; schedulePaths[i][j] != '\0'; j++);
-        direction = schedulePaths[i][j - 6];
-
-        char line[50];
-
-        int routeNo;
-        int numStops;
-
-        sscanf(fgets(line, 50, schedule), "%d%*s%d", &routeNo, &numStops);
-        
-        fclose(schedule);
-
-        printf("schedule %d is route %d it has %d stops and is in the %c direction\n", i+1, routeNo, numStops, direction);
+    FILE *outputFile = fopen("output.txt", "w");
+    if (outputFile == NULL) {
+        printf("ERROR: Failed to create output file output.txt.\n");
+        return 1;
     }
+
+    char line[100];
+    int numRecords;
+    sscanf(fgets(line, 100, inputFile), "%d", &numRecords);
+
+    for (int i = 0; i < numRecords; i++) {
+        // TODO: Implement output
+    }
+
+    fclose(listFile);
+    fclose(inputFile);
+    fclose(outputFile);
 
     return 0;
 }

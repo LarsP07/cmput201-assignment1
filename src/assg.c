@@ -1,12 +1,36 @@
 #include <stdio.h>
 
+char *ISOFormat(char *buffer, int month, int day, int year, int hour, int minute) {
+    sprintf(buffer, "%4d-%2d-%2dT%2d:%2d:00", year, month, day, hour, minute);
+    return buffer;
+}
+
+char *getTravelTime(char *buffer, int ihour, int iminute, int fhour, int fminute) {
+    int hour = fhour - ihour;
+    int minute = fminute - iminute;
+    if (minute < 0) {
+        minute += 60;
+        hour--;
+    }
+    
+    if (hour < 0) {
+        hour += 24;
+    }
+
+    sprintf(buffer, "%d:%2d:00", hour, minute);
+}
+
 int parseInputFile(FILE *inputFile, int month[], int day[], int year[], int hour[], int minute[], char type[], int location[]) {
     char line[100];
-    int i = 0;
 
     char apm;
 
-    for (int n = 0; fgets(line, 100, inputFile); n++) {
+    int i;
+
+    // Done to skip the first line. Much easier than dealing with fpos.
+    fgets(line, 100, inputFile);
+
+    for (i = 0; fgets(line, 100, inputFile); i++) {
         if (!sscanf(line, "%u-%u-%u,%u:%u %cM,%c", &month[i], &day[i], &year[i], &hour[i], &minute[i], &apm, &type[i])) {
             return -1;
         }
@@ -18,14 +42,12 @@ int parseInputFile(FILE *inputFile, int month[], int day[], int year[], int hour
         }
 
         if (apm == 'P') hour[i] += 12;
-
-        i++;
     }
 
     return i;
 }
 
-int findRoute(FILE *listFile, int entry, int exit, char schedule[], char entryStop[], char exitStop[]) {
+int findRoute(FILE *listFile, int entry, int exit, char route[], char entryStop[], char exitStop[]) {
     FILE *scheduleFile;
     char path[100];
     
@@ -40,8 +62,10 @@ int findRoute(FILE *listFile, int entry, int exit, char schedule[], char entrySt
 
     char line[100];
 
-    while (fgets(path, 100, listFile)) {
+    while (fgets(path, 100, listFile) && !foundRoute) {
         // Quick way to eliminate trailing newline character.
+        // NOTE: This only works if your string has NO WHITESPACE CHARACTERS other than the newline.
+        // Learned that the hard way.
         sscanf(path, "%s", path);
         scheduleFile = fopen(path, "r");
 
@@ -49,26 +73,34 @@ int findRoute(FILE *listFile, int entry, int exit, char schedule[], char entrySt
 
         int foundEntry = 0;
 
-        for (int i = 1; fgets(line, 100, scheduleFile) && (!foundEntry || !foundRoute); i++) {
+        while (fgets(line, 100, scheduleFile) && (!foundEntry || !foundRoute)) {
             sscanf(line, "%u", &location);
             if (!foundEntry && location == entry) {
                 sscanf(line, "%s", tempEntryStop);
                 foundEntry = 1;
-            } else if (location == exit) {
+            } else if (foundEntry && location == exit) {
                 sscanf(line, "%s", tempExitStop);
                 foundRoute = 1;
             }
         }
 
         fclose(scheduleFile);
-
-        if (foundRoute) break;
     }
 
     if (foundRoute) {
-        sscanf(tempSchedule, "%s", schedule);
-        sscanf(tempEntryStop, "%s", entryStop);
-        sscanf(tempExitStop, "%s", exitStop);
+        int routeNo;
+        sscanf(tempSchedule, "%d", &routeNo);
+        char direction;
+        for (int i = 0; i < 100; i++) {
+            if (path[i] == 'B') {
+                direction = path[i - 1];
+                break;
+            }
+        }
+
+        sprintf(route, "%d %c", routeNo, direction);
+        sprintf(entryStop, "%s", tempEntryStop);
+        sprintf(exitStop, "%s", tempExitStop);
     }
 
     return foundRoute;
@@ -116,9 +148,21 @@ int main(int argc, char *argv[]) {
     char schedule[100];
     char entryStop[100];
     char exitStop[100];
+    char entryTime[100];
+    char exitTime[100];
+    char travelTime[100];
 
     for (int i = 0; i < numRecords; i += 2) {
-        if (findRoute(listFile, location[i + 1], location[i], schedule, entryStop, exitStop)) printf("%s %s %s\n", schedule, entryStop, exitStop);
+        if (!findRoute(listFile, location[i + 1], location[i], schedule, entryStop, exitStop)) {
+            printf("Invalid stop ID");
+            return 1;
+        }
+
+        ISOFormat(entryTime, month[i + 1], day[i + 1], year[i + 1], hour[i + 1], minute[i + 1]);
+        ISOFormat(exitTime, month[i], day[i], year[i], hour[i], minute[i]);
+        getTravelTime(travelTime, hour[i + 1], minute[i + 1], hour[i], minute[i]);
+
+        printf("%s\n", schedule);
     }
 
     FILE *outputFile = fopen("output.txt", "w");

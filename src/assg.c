@@ -54,16 +54,18 @@ int findRoute(FILE *listFile, int entry, int exit, char route[], char entryStop[
     
     rewind(listFile);
 
-    int location;
-    int foundRoute = 0;
-
     char tempSchedule[100];
-    char tempEntryStop[100];
-    char tempExitStop[100];
+    char tempEntryStop[100] = "";
+    char tempExitStop[100] = "";
+
+    char potentialRoutes[14][100];
+
+    // Number of potential routes
+    int pot = 0;
 
     char line[100];
 
-    while (fgets(path, 100, listFile) && !foundRoute) {
+    while (fgets(path, 100, listFile)) {
         // Quick way to eliminate trailing newline character.
         // NOTE: This only works if your string has NO WHITESPACE CHARACTERS other than the newline.
         // Learned that the hard way.
@@ -73,38 +75,78 @@ int findRoute(FILE *listFile, int entry, int exit, char route[], char entryStop[
         fgets(tempSchedule, 100, scheduleFile);
 
         int foundEntry = 0;
+        int foundRoute = 0;
+
+        int location;
 
         while (fgets(line, 100, scheduleFile) && (!foundEntry || !foundRoute)) {
             sscanf(line, "%u", &location);
             if (!foundEntry && location == entry) {
-                sscanf(line, "%s", tempEntryStop);
                 foundEntry = 1;
+                if (tempEntryStop[0] == '\0') sscanf(line, "%s", tempEntryStop);
             } else if (foundEntry && location == exit) {
-                sscanf(line, "%s", tempExitStop);
                 foundRoute = 1;
+                if (tempExitStop[0] == '\0') sscanf(line, "%s", tempExitStop);
             }
         }
 
         fclose(scheduleFile);
+
+        if (foundRoute) {
+            int routeNo;
+            sscanf(tempSchedule, "%d", &routeNo);
+            char direction;
+            for (int i = 0; i < 100; i++) {
+                if (path[i] == 'B') {
+                    direction = path[i - 1];
+                    break;
+                }
+            }
+
+            sprintf(potentialRoutes[pot], "%d %c", routeNo, direction);
+
+            pot++;
+        }
     }
 
-    if (foundRoute) {
-        int routeNo;
-        sscanf(tempSchedule, "%d", &routeNo);
-        char direction;
-        for (int i = 0; i < 100; i++) {
-            if (path[i] == 'B') {
-                direction = path[i - 1];
-                break;
-            }
+    int chosenRoute;
+
+    if (pot == 0) {
+        printf("Invalid stop ID\n");
+        return 0;
+    } else if (pot == 1) {
+        chosenRoute = 0;
+    } else {
+        int location;
+        char stop[100];
+
+        printf("Ambiguous trip detected:\n");
+        sscanf(tempEntryStop, "%u,%s", &location, stop);
+        printf("Entry: %d (%s)\n", location, stop);
+        sscanf(tempExitStop, "%u,%s", &location, stop);
+        printf("Exit: %d (%s)\n", location, stop);
+        printf("Possible routes:\n");
+        for (int i = 0; i < pot; i++) {
+            printf("%d: %s\n", i + 1, potentialRoutes[i]);
+        }
+        printf("Select route (1-%d): ", pot);
+
+        if (!scanf("%d", &chosenRoute)) {
+            printf("Invalid data format\n");
+            return 0;
+        } else if (chosenRoute < 1 || chosenRoute > pot) {
+            printf("Invalid index\n");
+            return 0;
         }
 
-        sprintf(route, "%d %c", routeNo, direction);
-        sprintf(entryStop, "%s", tempEntryStop);
-        sprintf(exitStop, "%s", tempExitStop);
+        chosenRoute--;
     }
 
-    return foundRoute;
+    sprintf(route, "%s", potentialRoutes[chosenRoute]);
+    sscanf(tempEntryStop, "%*u,%s", entryStop);
+    sscanf(tempExitStop, "%*u,%s", exitStop);
+
+    return 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -160,10 +202,7 @@ int main(int argc, char *argv[]) {
     char duration[100];
 
     for (int i = numRecords - 1; i >= 0; i -= 2) {
-        if (!findRoute(listFile, location[i], location[i - 1], schedule, entryStop, exitStop)) {
-            printf("Invalid stop ID");
-            return 1;
-        }
+        if (!findRoute(listFile, location[i], location[i - 1], schedule, entryStop, exitStop)) return 1;
 
         ISOFormat(entryTime, month[i], day[i], year[i], hour[i], minute[i]);
         ISOFormat(exitTime, month[i - 1], day[i - 1], year[i - 1], hour[i - 1], minute[i - 1]);

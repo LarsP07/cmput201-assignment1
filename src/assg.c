@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 char *ISOFormat(char *buffer, int month, int day, int year, int hour, int minute) {
-    sprintf(buffer, "%4d-%2d-%2dT%2d:%2d:00", year, month, day, hour, minute);
+    sprintf(buffer, "%4d-%02d-%02dT%02d:%02d:00", year, month, day, hour, minute);
     return buffer;
 }
 
@@ -17,7 +17,7 @@ char *getTravelTime(char *buffer, int ihour, int iminute, int fhour, int fminute
         hour += 24;
     }
 
-    sprintf(buffer, "%d:%2d:00", hour, minute);
+    sprintf(buffer, "%d:%02d:00", hour, minute);
 }
 
 int parseInputFile(FILE *inputFile, int month[], int day[], int year[], int hour[], int minute[], char type[], int location[]) {
@@ -41,7 +41,8 @@ int parseInputFile(FILE *inputFile, int month[], int day[], int year[], int hour
             return -1;
         }
 
-        if (apm == 'P') hour[i] += 12;
+        if (apm == 'P' && hour[i] != 12) hour[i] += 12;
+        else if (apm == 'A' && hour[i] == 12) hour[i] = 0;
     }
 
     return i;
@@ -145,30 +146,30 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    FILE *outputFile = fopen("output.txt", "w");
+    if (outputFile == NULL) {
+        printf("Failed to create output file output.txt\n");
+        return 1;
+    }
+
     char schedule[100];
     char entryStop[100];
     char exitStop[100];
     char entryTime[100];
     char exitTime[100];
-    char travelTime[100];
+    char duration[100];
 
-    for (int i = 0; i < numRecords; i += 2) {
-        if (!findRoute(listFile, location[i + 1], location[i], schedule, entryStop, exitStop)) {
+    for (int i = numRecords - 1; i >= 0; i -= 2) {
+        if (!findRoute(listFile, location[i], location[i - 1], schedule, entryStop, exitStop)) {
             printf("Invalid stop ID");
             return 1;
         }
 
-        ISOFormat(entryTime, month[i + 1], day[i + 1], year[i + 1], hour[i + 1], minute[i + 1]);
-        ISOFormat(exitTime, month[i], day[i], year[i], hour[i], minute[i]);
-        getTravelTime(travelTime, hour[i + 1], minute[i + 1], hour[i], minute[i]);
+        ISOFormat(entryTime, month[i], day[i], year[i], hour[i], minute[i]);
+        ISOFormat(exitTime, month[i - 1], day[i - 1], year[i - 1], hour[i - 1], minute[i - 1]);
+        getTravelTime(duration, hour[i], minute[i], hour[i - 1], minute[i - 1]);
 
-        printf("%s\n", schedule);
-    }
-
-    FILE *outputFile = fopen("output.txt", "w");
-    if (outputFile == NULL) {
-        printf("Failed to create output file output.txt\n");
-        return 1;
+        fprintf(outputFile, "%s,%s,%s,%s,%s,%s\n", schedule, entryStop, exitStop, entryTime, exitTime, duration);
     }
 
     fclose(listFile);

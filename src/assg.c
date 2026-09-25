@@ -241,20 +241,20 @@ int main(int argc, char *argv[]) {
         ISOFormat(exitTime, month[i - 1], day[i - 1], year[i - 1], hour[i - 1], minute[i - 1]);
         getTravelTime(duration, hour[i], minute[i], hour[i - 1], minute[i - 1]);
 
-        if (type[i - 1] != 'M') {
-            if (!findRoute(listFile, location[i], location[i - 1], schedule, entryStop, exitStop)) {
-                ret = 1;
-                break;
-            }
-            fprintf(outputFile, "%s,%s,%s,%s,%s,%s\n", schedule, entryStop, exitStop, entryTime, exitTime, duration);
+        int exitLocation;
+        char guessed[20] = "";
+        if (type[i - 1] == 'M') {
+            exitLocation = guessStop(buckets[hour[i - 1]]);
+            sprintf(guessed, "%s", ",Guessed");
         } else {
-            int guessedLocation = guessStop(buckets[hour[i - 1]]);
-            if (!findRoute(listFile, location[i], guessedLocation, schedule, entryStop, exitStop)) {
-                ret = 1;
-                break;
-            }
-            fprintf(outputFile, "%s,%s,%s,%s,%s,%s,Guessed\n", schedule, entryStop, exitStop, entryTime, exitTime, duration);
+            exitLocation = location[i - 1];
         }
+
+        if (!findRoute(listFile, location[i], exitLocation, schedule, entryStop, exitStop)) {
+            ret = 1;
+            break;
+        }
+        fprintf(outputFile, "%s,%s,%s,%s,%s,%s%s\n", schedule, entryStop, exitStop, entryTime, exitTime, duration, guessed);
     }
 
     fclose(listFile);

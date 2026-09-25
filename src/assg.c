@@ -32,12 +32,19 @@ int parseInputFile(FILE *inputFile, int month[], int day[], int year[], int hour
 
     for (i = 0; fgets(line, 100, inputFile); i++) {
         if (!sscanf(line, "%u-%u-%u,%u:%u %cM,%c", &month[i], &day[i], &year[i], &hour[i], &minute[i], &apm, &type[i])) {
+            printf("Invalid data format\n");
             return -1;
         }
 
         if (type[i] == 'M') {
             location[i] = -1;
         } else if (!sscanf(line, "%*u-%*u-%*u,%*u:%*u %*cM,%*c,%u", &location[i])) {
+            printf("Invalid data format\n");
+            return -1;
+        }
+
+        if (location[i] >= 10000) {
+            printf("Invalid stop ID\n");
             return -1;
         }
 
@@ -149,6 +156,20 @@ int findRoute(FILE *listFile, int entry, int exit, char route[], char entryStop[
     return 1;
 }
 
+int guessStop(int bucket[]) {
+    int max = 0;
+    int maxStop = 0;
+
+    for (int i = 0; i < 10000; i++) {
+        if (bucket[i] > max) {
+            max = bucket[i];
+            maxStop = i;
+        }
+    }
+
+    return maxStop;
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 3) {
         printf("2 input parameters expected, %d given\n", argc);
@@ -181,16 +202,28 @@ int main(int argc, char *argv[]) {
     char type[numRecords];
     int location[numRecords];
 
-    int parsedRecords = parseInputFile(inputFile, month, day, year, hour, minute, type, location);
-    if (parsedRecords == -1) {
-        printf("Invalid data format\n");
+    if (parseInputFile(inputFile, month, day, year, hour, minute, type, location) == -1) {
+        fclose(listFile);
         fclose(inputFile);
         return 1;
+    }
+
+    int buckets[24][10000];
+    for (int i = 0; i < 24; i++) {
+        for (int j = 0; j < 10000; j++) {
+            buckets[i][j] = 0;
+        }
+    }
+
+    for (int i = 0; i < numRecords; i++) {
+        if (type[i] == 'X') buckets[hour[i]][location[i]]++;
     }
 
     FILE *outputFile = fopen("output.txt", "w");
     if (outputFile == NULL) {
         printf("Failed to create output file output.txt\n");
+        fclose(listFile);
+        fclose(inputFile);
         return 1;
     }
 
@@ -201,19 +234,32 @@ int main(int argc, char *argv[]) {
     char exitTime[100];
     char duration[100];
 
-    for (int i = numRecords - 1; i >= 0; i -= 2) {
-        if (!findRoute(listFile, location[i], location[i - 1], schedule, entryStop, exitStop)) return 1;
+    int ret = 0;
 
+    for (int i = numRecords - 1; i >= 0; i -= 2) {
         ISOFormat(entryTime, month[i], day[i], year[i], hour[i], minute[i]);
         ISOFormat(exitTime, month[i - 1], day[i - 1], year[i - 1], hour[i - 1], minute[i - 1]);
         getTravelTime(duration, hour[i], minute[i], hour[i - 1], minute[i - 1]);
 
-        fprintf(outputFile, "%s,%s,%s,%s,%s,%s\n", schedule, entryStop, exitStop, entryTime, exitTime, duration);
+        if (type[i - 1] != 'M') {
+            if (!findRoute(listFile, location[i], location[i - 1], schedule, entryStop, exitStop)) {
+                ret = 1;
+                break;
+            }
+            fprintf(outputFile, "%s,%s,%s,%s,%s,%s\n", schedule, entryStop, exitStop, entryTime, exitTime, duration);
+        } else {
+            int guessedLocation = guessStop(buckets[hour[i - 1]]);
+            if (!findRoute(listFile, location[i], guessedLocation, schedule, entryStop, exitStop)) {
+                ret = 1;
+                break;
+            }
+            fprintf(outputFile, "%s,%s,%s,%s,%s,%s,Guessed\n", schedule, entryStop, exitStop, entryTime, exitTime, duration);
+        }
     }
 
     fclose(listFile);
     fclose(inputFile);
     fclose(outputFile);
 
-    return 0;
+    return ret;
 }

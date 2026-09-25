@@ -156,15 +156,13 @@ int findRoute(FILE *listFile, int entry, int exit, char route[], char entryStop[
     return 1;
 }
 
-int guessStop(int bucket[]) {
+int guessStop(int bucket[], int bucketCount[], int n) {
     int max = 0;
     int maxStop = 0;
 
-    for (int i = 0; i < 10000; i++) {
-        if (bucket[i] > max) {
-            max = bucket[i];
-            maxStop = i;
-        }
+    for (int i = 0; i < n; i++) {
+        if (bucketCount[i] > max) max = bucketCount[i];
+        if (bucketCount[i] >= max) maxStop = bucket[i];
     }
 
     return maxStop;
@@ -208,15 +206,33 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int buckets[24][10000];
+    int buckets[24][100];
+    int bucketCounts[24][100];
     for (int i = 0; i < 24; i++) {
-        for (int j = 0; j < 10000; j++) {
+        for (int j = 0; j < 100; j++) {
             buckets[i][j] = 0;
+            bucketCounts[i][j] = 0;
         }
     }
+    int bucketIndex = 0;
 
     for (int i = 0; i < numRecords; i++) {
-        if (type[i] == 'X') buckets[hour[i]][location[i]]++;
+        if (type[i] != 'X') continue;
+
+        int *bucket = buckets[hour[i]];
+        int *bucketCount = bucketCounts[hour[i]];
+
+        int j;
+        for (j = 0; j < bucketIndex; j++) {
+            if (bucket[j] == location[i]) break;
+        }
+
+        if (j < bucketIndex) bucketCount[j]++;
+        else {
+            bucket[j] = location[i];
+            bucketCount[j]++;
+            bucketIndex++;
+        }
     }
 
     FILE *outputFile = fopen("output.txt", "w");
@@ -244,7 +260,7 @@ int main(int argc, char *argv[]) {
         int exitLocation;
         char guessed[20] = "";
         if (type[i - 1] == 'M') {
-            exitLocation = guessStop(buckets[hour[i - 1]]);
+            exitLocation = guessStop(buckets[hour[i - 1]], bucketCounts[hour[i - 1]], bucketIndex);
             sprintf(guessed, "%s", ",Guessed");
         } else {
             exitLocation = location[i - 1];

@@ -1,15 +1,5 @@
 #include <stdio.h>
 
-void removeTrailingNewline(char *str) {
-    if (str[0] == '\0') return;
-    
-    int i;
-    for (i = 0; str[i] != '\0'; i++);
-    if (str[i - 1] == '\n') str[i - 1] = '\0';
-
-    return;
-}
-
 int main(int argc, char *argv[]) {
     if (argv[1] == NULL) {
         printf("ERROR: No path files parameter given.\n");
@@ -49,16 +39,24 @@ int main(int argc, char *argv[]) {
         for (j = 0; schedulePaths[i][j] != '\0'; j++);
         direction = schedulePaths[i][j - 6];
 
-        char line[50];
+        char routeNo[5];
+        sscanf(schedulePaths[i], "simplified_schedules/route_%4s", routeNo);
+        for (int j = 0; j < 4; j++) {
+            if (routeNo[j] == '_') {
+                routeNo[j] = '\0';
+                break;
+            }
+        }
 
-        int routeNo;
         int numStops;
+        char line[50];
+        fgets(line, 50, schedule);
 
-        sscanf(fgets(line, 50, schedule), "%d%*s%d", &routeNo, &numStops);
+        sscanf(line, "%*d%*s%d", &numStops);
 
         fclose(schedule);
 
-        printf("schedule #%d is route %d it has %d stops and is in the %c direction\n", i+1, routeNo, numStops, direction);
+        printf("schedule #%d is route %s it has %d stops and is in the %c direction\n", i+1, routeNo, numStops, direction);
     }
 
     return 0;

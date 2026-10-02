@@ -18,6 +18,8 @@ char *getTravelTime(char *buffer, int ihour, int iminute, int fhour, int fminute
     }
 
     sprintf(buffer, "%d:%02d:00", hour, minute);
+
+    return buffer;
 }
 
 int parseInputFile(FILE *inputFile, int month[], int day[], int year[], int hour[], int minute[], char type[], int location[]) {
@@ -32,19 +34,19 @@ int parseInputFile(FILE *inputFile, int month[], int day[], int year[], int hour
 
     for (i = 0; fgets(line, 100, inputFile); i++) {
         if (!sscanf(line, "%u-%u-%u,%u:%u %cM,%c", &month[i], &day[i], &year[i], &hour[i], &minute[i], &apm, &type[i])) {
-            printf("Invalid data format\n");
+            printf("Invalid data format\r\n");
             return -1;
         }
 
         if (type[i] == 'M') {
             location[i] = -1;
         } else if (!sscanf(line, "%*u-%*u-%*u,%*u:%*u %*cM,%*c,%u", &location[i])) {
-            printf("Invalid data format\n");
+            printf("Invalid data format\r\n");
             return -1;
         }
 
         if (location[i] >= 10000) {
-            printf("Invalid stop ID\n");
+            printf("Invalid stop ID\r\n");
             return -1;
         }
 
@@ -119,7 +121,7 @@ int findRoute(FILE *listFile, int entry, int exit, char route[], char entryStop[
     int chosenRoute;
 
     if (pot == 0) {
-        printf("Invalid stop ID\n");
+        printf("Invalid stop ID\r\n");
         return 0;
     } else if (pot == 1) {
         chosenRoute = 0;
@@ -127,22 +129,22 @@ int findRoute(FILE *listFile, int entry, int exit, char route[], char entryStop[
         int location;
         char stop[100];
 
-        printf("Ambiguous trip detected:\n");
+        printf("Ambiguous trip detected:\r\n");
         sscanf(tempEntryStop, "%u,%s", &location, stop);
-        printf("Entry: %d (%s)\n", location, stop);
+        printf("Entry: %d (%s)\r\n", location, stop);
         sscanf(tempExitStop, "%u,%s", &location, stop);
-        printf("Exit: %d (%s)\n", location, stop);
-        printf("Possible routes:\n");
+        printf("Exit: %d (%s)\r\n", location, stop);
+        printf("Possible routes:\r\n");
         for (int i = 0; i < pot; i++) {
-            printf("%d: %s\n", i + 1, potentialRoutes[i]);
+            printf("%d. %s\r\n", i + 1, potentialRoutes[i]);
         }
-        printf("Select route (1-%d): ", pot);
+        printf("Select route (1-%d): \r\n", pot);
 
         if (!scanf("%d", &chosenRoute)) {
-            printf("Invalid data format\n");
+            printf("Invalid data format\r\n");
             return 0;
         } else if (chosenRoute < 1 || chosenRoute > pot) {
-            printf("Invalid index\n");
+            printf("Invalid index\r\n");
             return 0;
         }
 
@@ -170,26 +172,26 @@ int guessStop(int bucket[], int bucketCount[], int n) {
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        printf("2 input parameters expected, %d given\n", argc);
+        printf("2 input parameters expected, %d given\r\n", argc);
         return 1;
     }
 
     FILE *listFile = fopen(argv[1], "r");
     if (listFile == NULL) {
-        printf("List file %s failed to open\n", argv[1]);
+        printf("List file %s failed to open\r\n", argv[1]);
         return 1;
     }
 
     FILE *inputFile = fopen(argv[2], "r");
     if (inputFile == NULL) {
-        printf("Input file %s failed to open\n", argv[2]);
+        printf("Input file %s failed to open\r\n", argv[2]);
         return 1;
     }
 
     int numRecords;
     if (!fscanf(inputFile, "%d", &numRecords)) {
         printf("Invalid data format");
-        return 1;
+        return 0;
     }
 
     int month[numRecords];
@@ -203,7 +205,7 @@ int main(int argc, char *argv[]) {
     if (parseInputFile(inputFile, month, day, year, hour, minute, type, location) == -1) {
         fclose(listFile);
         fclose(inputFile);
-        return 1;
+        return 0;
     }
 
     int buckets[24][100];
@@ -237,7 +239,7 @@ int main(int argc, char *argv[]) {
 
     FILE *outputFile = fopen("output.txt", "w");
     if (outputFile == NULL) {
-        printf("Failed to create output file output.txt\n");
+        printf("Failed to create output file output.txt\r\n");
         fclose(listFile);
         fclose(inputFile);
         return 1;
@@ -270,7 +272,7 @@ int main(int argc, char *argv[]) {
             ret = 1;
             break;
         }
-        fprintf(outputFile, "%s,%s,%s,%s,%s,%s%s\n", schedule, entryStop, exitStop, entryTime, exitTime, duration, guessed);
+        fprintf(outputFile, "%s,%s,%s,%s,%s,%s%s\r\n", schedule, entryStop, exitStop, entryTime, exitTime, duration, guessed);
     }
 
     fclose(listFile);
